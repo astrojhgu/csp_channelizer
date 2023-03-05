@@ -49,6 +49,8 @@ struct Channelizer {
     void fft();
 
     void rearrange();
+
+    void channelize(const std::vector<std::complex<RawDataType>> data, std::vector<std::complex<FloatType>>& output);
     std::vector<std::complex<FloatType>> peek_channelized();
 };
 

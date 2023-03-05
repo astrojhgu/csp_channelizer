@@ -74,6 +74,7 @@ template <typename T>
 std::unique_ptr<T[], Deleter<T>> gpu_alloc(std::size_t n) {
     T *ptr = nullptr;
     CHECK_CUDA_ERROR(cudaMalloc(&ptr, sizeof(T) * n));
+    cudaMemset(ptr, 0, sizeof(T)*n);
     gpu_mem_used += sizeof(T) * n;
 
     // auto deleter = [&](auto *ptr) { cudaFree((void *)ptr); };

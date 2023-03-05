@@ -19,16 +19,16 @@ int main() {
     auto nch_fine_per_coarse=32;
 
     std::vector<std::complex<int16_t>> raw_data(nsteps * nch);
-    auto dphi_dpt = 1.5 * 3.1415926 / 16.0;
+    auto dphi_dpt = 2.1 * 3.1415926 / 16.0;
     auto phi = 0.0;
     for (int i = 0; i < nsteps; ++i) {
         int j = 0;
-        auto x = std::polar<int16_t>(16384, phi);
-        raw_data[i * nch + j] = x;
+        auto x = std::polar<float>(270, phi);
+        raw_data[i * nch + j] = std::complex<int16_t>(x.real(), x.imag());
         phi += dphi_dpt;
     }
 
-    std::vector<float> coeffs=pfb_coeff(nch_fine_per_coarse, 16, 0.9);
+    std::vector<float> coeffs=pfb_coeff(nch_fine_per_coarse, 16, 0.8);
     for(int i=0;i<coeffs.size();++i){
         coeffs[i]*=100;
     }
@@ -38,12 +38,12 @@ int main() {
     Channelizer channelizer1(nsteps, nch, nch_fine_per_coarse, coeffs);
     // exit(0);
     std::cout << (gpu_mem_used / 1024.0 / 1024 / 1024) << " GB" << std::endl;
-
+    
+    ofstream ofs;
     for (int i = 0; i < 100; ++i) {
         channelizer.put_raw(raw_data.data());
         channelizer.transpose();
         channelizer.shift();
-        // channelizer.shift();
         channelizer.filter();
         channelizer.fft();
         channelizer.rearrange();
@@ -52,6 +52,8 @@ int main() {
     }
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     std::vector<std::complex<int16_t>> raw_data1(nsteps * nch);
+    std::vector<std::complex<int16_t>> transposed(nch*nsteps);
+    
     channelizer.get_transposed(raw_data1.data());
     std::cout << "validating" << std::endl;
     for (int i = 0; i < nsteps; ++i) {
@@ -59,14 +61,18 @@ int main() {
             assert(raw_data[i * nch + j] == raw_data1[j * nsteps + i]);
         }
     }
+
+    ofs.open("raw.bin", std::ios::binary);
+    ofs.write((char*)raw_data.data(), raw_data.size()*sizeof(complex<int16_t>));
+    ofs.close();
+
+    cout<<(transposed.size()*sizeof(complex<int16_t>))<<" "<<(raw_data1.size()*sizeof(complex<int16_t>))<<endl;
     std::vector<std::complex<float>> fft_result(nsteps * nch);
 
     channelizer.get_working_mem(fft_result.data(), 1);
 
-    ofstream ofs("a.bin", std::ios::binary);
-    ofs.write((const char *) fft_result.data(), fft_result.size() * sizeof(std::complex<float>));
-
     auto channelized = channelizer.peek_channelized();
-    ofstream ofs1("result.bin", std::ios::binary);
-    ofs1.write((const char *) channelized.data(), channelized.size() * sizeof(std::complex<float>));
+    ofs.open("result.bin", std::ios::binary);
+    ofs.write((const char *) channelized.data(), channelized.size() * sizeof(std::complex<float>));
+    ofs.close();
 }
