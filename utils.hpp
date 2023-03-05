@@ -6,8 +6,10 @@
 #include <iostream>
 #include <memory>
 #include <utility>
-
+#include "types.hpp"
 extern size_t gpu_mem_used;
+
+static constexpr FloatType PI = 3.14159265358979323846f;
 
 #define CHECK_CUDA_ERROR(val) check((val), #val, __FILE__, __LINE__)
 template <typename T>

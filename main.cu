@@ -7,7 +7,7 @@
 #include <vector>
 #include <chrono>
 #include <thread>
-
+#include "fir_coeffs.h"
 using namespace std;
 
 #include "transpose.hpp"
@@ -16,21 +16,21 @@ using namespace std;
 int main() {
     auto nsteps = 1 << 20;
     auto nch = 88;
-    auto nch_fine_per_coarse=64;
+    auto nch_fine_per_coarse=32;
 
     std::vector<std::complex<int16_t>> raw_data(nsteps * nch);
-    auto dphi_dpt = 2.0 * 3.1415926 / 16.0;
+    auto dphi_dpt = 1.5 * 3.1415926 / 16.0;
     auto phi = 0.0;
     for (int i = 0; i < nsteps; ++i) {
         int j = 0;
-        auto x = std::polar<int16_t>(200.0, phi);
+        auto x = std::polar<int16_t>(16384, phi);
         raw_data[i * nch + j] = x;
         phi += dphi_dpt;
     }
 
-    std::vector<float> coeffs(nch_fine_per_coarse*2);
-    for(int i=0;i<nch_fine_per_coarse;++i){
-        coeffs[i+nch_fine_per_coarse]=1.0;
+    std::vector<float> coeffs=pfb_coeff(nch_fine_per_coarse, 16, 0.9);
+    for(int i=0;i<coeffs.size();++i){
+        coeffs[i]*=100;
     }
 
     std::cout << "initialization finished" << std::endl;
