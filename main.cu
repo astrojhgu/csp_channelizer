@@ -28,7 +28,7 @@ int main() {
         phi += dphi_dpt;
     }
 
-    std::vector<float> coeffs=pfb_coeff(nch_fine_per_coarse, 16, 0.8);
+    std::vector<float> coeffs=pfb_coeff(nch_fine_per_coarse, 8, 0.8);
     for(int i=0;i<coeffs.size();++i){
         coeffs[i]*=100;
     }

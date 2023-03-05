@@ -18,7 +18,7 @@ int main() {
     auto nch = 88;
     auto nch_fine_per_coarse = 32;
 
-    std::vector<float> coeffs = pfb_coeff(nch_fine_per_coarse, 16, 0.8);
+    std::vector<float> coeffs = pfb_coeff(nch_fine_per_coarse, 4, 0.8);
     for (int i = 0; i < coeffs.size(); ++i) {
         coeffs[i] *= 100;
     }
