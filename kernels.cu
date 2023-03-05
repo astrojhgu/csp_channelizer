@@ -11,7 +11,21 @@ __global__ void shift_freq_cast_kernel(const RawComplex *transposed_data,
                                        const cuComplex *factor,
                                        size_t nsteps,
                                        size_t nch_coarse,
-                                       size_t nch_fine_per_carse_full) {
+                                       size_t nch_fine_per_coarse_full) {
+#if 1
+    assert(gridDim.x == nch_coarse);
+    auto input_base = transposed_data + blockIdx.x * nsteps;
+    auto output_base = shifted_data + blockIdx.x * nsteps;
+    assert(blockDim.x * gridDim.y >= nsteps);
+    auto idx = blockIdx.y * blockDim.x + threadIdx.x;
+    if (idx < nsteps) {
+        auto f = factor[idx % (nch_fine_per_coarse_full * 2)];
+        auto x = input_base[idx];
+        output_base[idx] = make_float2(x.real * f.x - x.imag * f.y, x.real * f.y + x.imag * f.x);
+    }
+
+#else
+
     size_t blockId = blockIdx.x + blockIdx.y * gridDim.x;
     size_t threadId = blockId * (blockDim.x * blockDim.y) + (threadIdx.y * blockDim.x) + threadIdx.x;
     size_t nthreads = gridDim.x * gridDim.y * blockDim.x * blockDim.y;
@@ -26,13 +40,14 @@ __global__ void shift_freq_cast_kernel(const RawComplex *transposed_data,
         if (task_id < nsteps * nch_coarse) {
             size_t ch = task_id / nsteps;
             size_t step = task_id - ch * nsteps;
-            auto f = factor[step % (nch_fine_per_carse_full * 2)];
+            auto f = factor[step % (nch_fine_per_coarse_full * 2)];
             auto x = transposed_data[task_id];
             auto xc = cuComplex(make_float2(x.real, x.imag));
 
             shifted_data[task_id] = make_float2(xc.x * f.x - xc.y * f.y, xc.x * f.y + xc.y * f.x);
         }
     }
+#endif
 }
 
 __global__ void pfb_conv_kernel(const cuComplex *input,

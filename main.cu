@@ -40,7 +40,7 @@ int main() {
     std::cout << (gpu_mem_used / 1024.0 / 1024 / 1024) << " GB" << std::endl;
     
     ofstream ofs;
-    for (int i = 0; i < 100; ++i) {
+    for (int i = 0; i < 1; ++i) {
         channelizer.put_raw(raw_data.data());
         channelizer.transpose();
         channelizer.shift();
