@@ -58,8 +58,8 @@ void Channelizer::get_transposed(std::complex<RawDataType> *dst) const {
 }
 
 void Channelizer::shift() {
-    dim3 grid(nch_coarse, nsteps/(2*nch_fine_per_coarse_full));
-    dim3 block(2*nch_fine_per_coarse_full, 1, 1);
+    dim3 grid(nch_coarse, nsteps/512);
+    dim3 block(512, 1, 1);
     shift_freq_cast_kernel<<<grid, block>>>(this->transposed_data.get(),
                                             this->working_mem1.get(),
                                             this->freq_shift_factor.get(),

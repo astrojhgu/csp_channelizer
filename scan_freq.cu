@@ -31,7 +31,7 @@ int main() {
     std::vector<std::complex<int16_t>> raw_data(nsteps * nch);
     ofstream ofs("spec.bin", std::ios::binary);
 
-    for(float f=-0.6; f<0.6; f+=0.001){
+    for(float f=-0.5; f<0.5; f+=0.001){
         std::cout<<f<<std::endl;
         auto omega = 2.0 * 3.1415926*f;
         auto phi = 0.0;

@@ -13,7 +13,10 @@ __global__ void shift_freq_cast_kernel(const RawComplex *transposed_data,
                                        size_t nch_coarse,
                                        size_t nch_fine_per_coarse_full) {
 #if 1
-    assert(gridDim.x == nch_coarse);
+    assert(gridDim.x >= nch_coarse);
+    if (blockIdx.x >=nch_coarse){
+        return;
+    }
     auto input_base = transposed_data + blockIdx.x * nsteps;
     auto output_base = shifted_data + blockIdx.x * nsteps;
     assert(blockDim.x * gridDim.y >= nsteps);
