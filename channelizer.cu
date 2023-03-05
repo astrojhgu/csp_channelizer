@@ -111,7 +111,7 @@ void Channelizer::rearrange() {
     }
 }
 
-void Channelizer::channelize(const std::vector<std::complex<RawDataType>> data, std::vector<std::complex<FloatType>>& output) {
+void Channelizer::channelize(const std::vector<std::complex<RawDataType>>& data, std::vector<std::complex<FloatType>>& output) {
     assert(data.size()==nsteps*nch_coarse);
     assert(output.size()==nsteps*nch_coarse/2);
     put_raw(data.data());

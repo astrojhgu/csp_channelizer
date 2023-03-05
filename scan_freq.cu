@@ -18,7 +18,7 @@ int main() {
     auto nch = 88;
     auto nch_fine_per_coarse = 32;
 
-    std::vector<float> coeffs = pfb_coeff(nch_fine_per_coarse, 4, 0.8);
+    std::vector<float> coeffs = pfb_coeff(nch_fine_per_coarse, 16, 1.1);
     for (int i = 0; i < coeffs.size(); ++i) {
         coeffs[i] *= 100;
     }
@@ -29,11 +29,12 @@ int main() {
     std::cout << (gpu_mem_used / 1024.0 / 1024 / 1024) << " GB" << std::endl;
 
     std::vector<std::complex<int16_t>> raw_data(nsteps * nch);
+    std::vector<std::complex<float>> channelized(nch * nsteps / 2);
     ofstream ofs("spec.bin", std::ios::binary);
 
-    for(float f=-0.5; f<0.5; f+=0.001){
-        std::cout<<f<<std::endl;
-        auto omega = 2.0 * 3.1415926*f;
+    for (float f = -0.5; f < 0.5; f += 0.001) {
+        std::cout << f << std::endl;
+        auto omega = 2.0 * 3.1415926 * f;
         auto phi = 0.0;
 
         for (int i = 0; i < nsteps; ++i) {
@@ -43,15 +44,14 @@ int main() {
             phi += omega;
         }
 
-        std::vector<std::complex<float>> channelized(nch*nsteps/2);
         channelizer.channelize(raw_data, channelized);
-        std::vector<float> spec(nch*nch_fine_per_coarse/2);
-        auto nsteps_fine=nsteps/nch_fine_per_coarse;
-        for(int i=0;i<nch*nch_fine_per_coarse/2;++i){
-            for(int j=0;j<nsteps_fine;++j){
-                spec[i]+=std::norm(channelized[i*nsteps_fine+j]);
+        std::vector<float> spec(nch * nch_fine_per_coarse / 2);
+        auto nsteps_fine = nsteps / nch_fine_per_coarse;
+        for (int i = 0; i < nch * nch_fine_per_coarse / 2; ++i) {
+            for (int j = 0; j < nsteps_fine; ++j) {
+                spec[i] += std::norm(channelized[i * nsteps_fine + j]);
             }
         }
-        ofs.write((char*)spec.data(), spec.size()*sizeof(float));
+        ofs.write((char *) spec.data(), spec.size() * sizeof(float));
     }
 }

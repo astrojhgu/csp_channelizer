@@ -41,13 +41,20 @@ int main() {
     
     ofstream ofs;
     for (int i = 0; i < 100; ++i) {
+        raw_data[i]=raw_data[0];
         channelizer.put_raw(raw_data.data());
+        channelizer1.put_raw(raw_data.data());
         channelizer.transpose();
+        channelizer1.transpose();
         channelizer.shift();
+        channelizer1.shift();
         channelizer.filter();
+        channelizer1.filter();
         channelizer.fft();
+        channelizer1.fft();
         channelizer.rearrange();
-        CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+        channelizer1.rearrange();
+        //CHECK_CUDA_ERROR(cudaDeviceSynchronize());
         cout << i << std::endl;
     }
     CHECK_CUDA_ERROR(cudaDeviceSynchronize());

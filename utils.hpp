@@ -66,7 +66,7 @@ class Deleter {
   public:
     void operator()(T *ptr) {
         cudaFree((void *) ptr);
-        std::cout << "\nDeleted\n";
+        std::cout << "Deleted\n";
     }
 };
 
