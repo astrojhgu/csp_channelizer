@@ -14,41 +14,46 @@ using namespace std;
 #include "channelizer.hpp"
 
 int main() {
-    auto nsteps = 1<<20;
+    auto nsteps = 1 << 20;
     auto nch = 88;
+    auto nch_fine_per_coarse=64;
 
     std::vector<std::complex<int16_t>> raw_data(nsteps * nch);
-    auto dphi_dpt=2.0*3.1415926/32.0;
-    auto phi=0.0;
-    for(int i=0;i<nsteps;++i){
-        int j=0;
-        auto x=std::polar<int16_t>(200.0, phi);
-        raw_data[i*nch+j]=x;
-        phi+=dphi_dpt;
+    auto dphi_dpt = 2.0 * 3.1415926 / 16.0;
+    auto phi = 0.0;
+    for (int i = 0; i < nsteps; ++i) {
+        int j = 0;
+        auto x = std::polar<int16_t>(200.0, phi);
+        raw_data[i * nch + j] = x;
+        phi += dphi_dpt;
     }
 
+    std::vector<float> coeffs(nch_fine_per_coarse*2);
+    for(int i=0;i<nch_fine_per_coarse;++i){
+        coeffs[i+nch_fine_per_coarse]=1.0;
+    }
 
     std::cout << "initialization finished" << std::endl;
-    Channelizer channelizer(nsteps, nch, 64);
-    Channelizer channelizer1(nsteps, nch, 64);
-    //exit(0);
+    Channelizer channelizer(nsteps, nch, nch_fine_per_coarse, coeffs);
+    Channelizer channelizer1(nsteps, nch, nch_fine_per_coarse, coeffs);
+    // exit(0);
     std::cout << (gpu_mem_used / 1024.0 / 1024 / 1024) << " GB" << std::endl;
-    
 
-    for(int i=0;i<100;++i){
+    for (int i = 0; i < 100; ++i) {
         channelizer.put_raw(raw_data.data());
         channelizer.transpose();
         channelizer.shift();
-        //channelizer.shift();
+        // channelizer.shift();
+        channelizer.filter();
         channelizer.fft();
         channelizer.rearrange();
         CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-        cout<<i<<std::endl;
+        cout << i << std::endl;
     }
-
+    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
     std::vector<std::complex<int16_t>> raw_data1(nsteps * nch);
     channelizer.get_transposed(raw_data1.data());
-    std::cout<<"validating"<<std::endl;
+    std::cout << "validating" << std::endl;
     for (int i = 0; i < nsteps; ++i) {
         for (int j = 0; j < nch; ++j) {
             assert(raw_data[i * nch + j] == raw_data1[j * nsteps + i]);
@@ -58,12 +63,10 @@ int main() {
 
     channelizer.get_working_mem(fft_result.data(), 1);
 
-    
     ofstream ofs("a.bin", std::ios::binary);
-    ofs.write((const char*)fft_result.data(), fft_result.size()*sizeof(std::complex<float>));
+    ofs.write((const char *) fft_result.data(), fft_result.size() * sizeof(std::complex<float>));
 
-    auto channelized=channelizer.peek_channelized();
+    auto channelized = channelizer.peek_channelized();
     ofstream ofs1("result.bin", std::ios::binary);
-    ofs1.write((const char*)channelized.data(), channelized.size()*sizeof(std::complex<float>));
-
+    ofs1.write((const char *) channelized.data(), channelized.size() * sizeof(std::complex<float>));
 }

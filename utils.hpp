@@ -37,6 +37,28 @@ void check(T err, const char *const func, const char *const file, const int line
 #define CHECK_LAST_CUDA_ERROR() checkLast(__FILE__, __LINE__)
 void checkLast(const char *const file, const int line);
 
+#define CHECK_CUDA(error)                                                                                              \
+    {                                                                                                                  \
+        if (error != cudaSuccess) {                                                                                    \
+            fprintf(stderr, "Error: %s:%d\n", __FILE__, __LINE__);                                                     \
+            fprintf(stderr, "code: %d, reason: %s\n", error, cudaGetErrorString(error));                               \
+            exit(-1);                                                                                                  \
+        }                                                                                                              \
+    }
+
+/**
+ * @brief check pointer validity
+ * @param ptr: generic pointer
+ */
+#define CHECK_PTR(ptr)                                                                                                 \
+    {                                                                                                                  \
+        if (ptr == NULL) {                                                                                             \
+            fprintf(stderr, "Error: %s:%d\n", __FILE__, __LINE__);                                                     \
+            fprintf(stderr, "Null pointer\n");                                                                         \
+            exit(-1);                                                                                                  \
+        }                                                                                                              \
+    }
+
 template <typename T>
 class Deleter {
   public:

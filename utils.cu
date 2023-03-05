@@ -1,5 +1,6 @@
 #include <cuda_runtime.h>
 #include "utils.hpp"
+size_t gpu_mem_used = 0;
 
 
 #define CHECK_LAST_CUDA_ERROR() checkLast(__FILE__, __LINE__)
