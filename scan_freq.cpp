@@ -16,12 +16,10 @@ int main() {
     auto nsteps = 1 << 20;
     auto nch = 88;
     auto nch_fine_per_coarse = 32;
-
-    std::vector<float> coeffs = pfb_coeff(nch_fine_per_coarse, 16, 1.1);
-    for (int i = 0; i < coeffs.size(); ++i) {
-        coeffs[i] *= 100;
-    }
-
+    auto tap_per_ch=16;
+    std::vector<float> coeffs = pfb_coeff(nch_fine_per_coarse, tap_per_ch, 1.1);
+    dump_data(coeffs, "coeff.bin");
+    
     std::cout << "initialization finished" << std::endl;
     Channelizer channelizer(nsteps, nch, nch_fine_per_coarse, coeffs);
     // exit(0);
@@ -31,19 +29,23 @@ int main() {
     std::vector<std::complex<float>> channelized(nch * nsteps / 2);
     ofstream ofs("spec.bin", std::ios::binary);
 
-    for (float f = -0.5; f < 0.5; f += 0.001) {
+    //for (float f = -0.5; f < 0.5; f += 0.001) 
+    double f=0.1;
+    {
         std::cout << f << std::endl;
         auto omega = 2.0 * 3.1415926 * f;
         auto phi = 0.0;
 #pragma omp parallel for
         for (int i = 0; i < nsteps; ++i) {
             int j = 0;
-            auto x = std::polar<float>(270, phi);
+            auto x = std::polar<double>(270, phi);
             raw_data[i * nch + j] = std::complex<int16_t>(x.real(), x.imag());
             phi += omega;
         }
+        dump_data(raw_data, "raw.bin");
 
         channelizer.channelize(raw_data, channelized);
+        dump_data(channelized, "out.bin");
         std::vector<float> spec(nch * nch_fine_per_coarse / 2);
         auto nsteps_fine = nsteps / nch_fine_per_coarse;
         for (int i = 0; i < nch * nch_fine_per_coarse / 2; ++i) {

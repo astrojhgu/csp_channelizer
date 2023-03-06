@@ -1,15 +1,18 @@
-all: main scan_freq test_filter test
+all: main scan_freq test_filter test scan_freq_c
 
 NVCC=nvcc
 HEADERS=channelizer.hpp kernels.h transpose.hpp types.hpp utils.hpp fir_coeffs.h
 NVFLAGS=-O3 -rdc=true
-CFLAGS=-I /usr/local/cuda/include -O3
-OBJS=utils.o channelizer.o kernels.o fir_coeffs.o 
+CFLAGS=-I /usr/local/cuda/include -O3 -g
+OBJS=utils.o channelizer.o kernels.o fir_coeffs.o channelizer_wrapper.o
 NVLIBS=-lcufft -lfftw3f -lcudart
-LIBS=-L . -L /usr/local/cuda/lib64 -lcspch  -lfftw3f -lcudart -lcufft
+LIBS=-L . -L /usr/local/cuda/lib64 -lcspch -lfftw3f -lcudart -lcufft
 
 cspch.o: $(OBJS)
-	nvcc -dlink -o $@ $^ $(NVLIBS)
+	nvcc -dlink -o $@ $^
+
+channelizer_wrapper.o: channelizer_wrapper.cpp $(HEADERS)
+	nvcc -c -o $@ $< $(NVFLAGS)
 
 libcspch.a: cspch.o $(OBJS)
 	ar crv $@ $^
@@ -39,6 +42,14 @@ scan_freq: scan_freq.o libcspch.a
 
 scan_freq.o: scan_freq.cpp $(HEADERS)
 	g++ -c $< -c -o $@ $(CFLAGS)
+
+
+scan_freq_c: scan_freq_c.o libcspch.a
+	gcc -o $@ $< $(LIBS) -lm -lstdc++
+
+scan_freq_c.o: scan_freq.c
+	gcc -c $< -o $@ -O3 -g
+
 
 utils.o: utils.cu $(HEADERS)
 	nvcc -c -o $@ $< $(NVFLAGS)

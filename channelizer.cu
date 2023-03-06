@@ -138,13 +138,17 @@ void Channelizer::channelize(const std::vector<std::complex<RawDataType>> &data,
                              std::vector<std::complex<FloatType>> &output) {
     assert(data.size() == nsteps * nch_coarse);
     assert(output.size() == nsteps * nch_coarse / 2);
-    put_raw(data.data());
+    this->channelize(data.data(), output.data());
+}
+
+void Channelizer::channelize(const std::complex<RawDataType>* data, std::complex<FloatType>* output){
+    put_raw(data);
     transpose();
     shift();
     filter();
     fft();
     rearrange();
-    cuda_mem_cpy(output.data(), working_mem1.get(), nsteps * nch_coarse / 2, cudaMemcpyDeviceToHost);
+    cuda_mem_cpy(output, working_mem1.get(), nsteps * nch_coarse / 2, cudaMemcpyDeviceToHost);
 }
 
 std::vector<std::complex<FloatType>> Channelizer::peek_channelized() {

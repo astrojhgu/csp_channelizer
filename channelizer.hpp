@@ -1,5 +1,6 @@
 #ifndef CHANNELIZER_HPP
 #define CHANNELIZER_HPP
+#include <vector>
 #include <cuComplex.h>
 #include <cufft.h>
 #include "utils.hpp"
@@ -34,7 +35,7 @@ struct Channelizer {
 
     virtual ~Channelizer();
 
-    Channelizer(size_t nsteps, size_t nch_coarse1, size_t nch_fine_per_coarse_full1, const vector<FloatType> &coeffs1);
+    Channelizer(size_t nsteps, size_t nch_coarse1, size_t nch_fine_per_coarse_full1, const std::vector<FloatType> &coeffs1);
     void put_raw(const std::complex<RawDataType> *data);
 
     void transpose();
@@ -52,6 +53,7 @@ struct Channelizer {
     void rearrange();
 
     void channelize(const std::vector<std::complex<RawDataType>>& data, std::vector<std::complex<FloatType>>& output);
+    void channelize(const std::complex<RawDataType>* data, std::complex<FloatType>* output);
     std::vector<std::complex<FloatType>> peek_channelized();
 
 
