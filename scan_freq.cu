@@ -36,7 +36,7 @@ int main() {
         std::cout << f << std::endl;
         auto omega = 2.0 * 3.1415926 * f;
         auto phi = 0.0;
-
+#pragma omp parallel for
         for (int i = 0; i < nsteps; ++i) {
             int j = 0;
             auto x = std::polar<float>(270, phi);
