@@ -24,6 +24,7 @@ struct Channelizer {
     std::unique_ptr<cuComplex[], Deleter<cuComplex>> working_mem2;
     std::unique_ptr<cuComplex[], Deleter<cuComplex>> freq_shift_factor;  // with length nch_fine_per_coarse*2
     std::unique_ptr<FloatType[], Deleter<FloatType>> coeffs;
+    std::unique_ptr<cuComplex[], Deleter<cuComplex>> buffer;
     size_t coeff_len{};
     cufftHandle fft_handle{0};
 
@@ -52,6 +53,11 @@ struct Channelizer {
 
     void channelize(const std::vector<std::complex<RawDataType>>& data, std::vector<std::complex<FloatType>>& output);
     std::vector<std::complex<FloatType>> peek_channelized();
+
+
+    //following functions are for debug purpose
+    std::vector<std::complex<FloatType>> get_shifted()const;
+    std::vector<std::complex<FloatType>> get_filtered()const;
 };
 
 #endif

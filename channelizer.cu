@@ -22,11 +22,12 @@ Channelizer::Channelizer(size_t nsteps,
       nch_fine_per_coarse_full(nch_fine_per_coarse_full1),
       raw_data(gpu_alloc<RawComplex>(nsteps * nch_coarse)),
       transposed_data(gpu_alloc<RawComplex>(nsteps * nch_coarse)),
-      working_mem1(gpu_alloc<cuComplex>(nsteps * nch_coarse)),
-      working_mem2(gpu_alloc<cuComplex>(nsteps * nch_coarse)),
+      working_mem1(gpu_alloc<cuComplex>((nsteps + coeffs1.size() - nch_fine_per_coarse_full1) * nch_coarse)),
+      working_mem2(gpu_alloc<cuComplex>((nsteps + coeffs1.size() - nch_fine_per_coarse_full1) * nch_coarse)),
       freq_shift_factor(gpu_alloc<cuComplex>(nch_fine_per_coarse_full1 * 2)),
       coeffs(gpu_alloc<FloatType>(coeffs1.size())),
-      coeff_len(coeffs1.size()) {
+      coeff_len(coeffs1.size()),
+      buffer(gpu_alloc<cuComplex>((coeffs1.size() - nch_fine_per_coarse_full1) * nch_coarse)) {
     assert(nsteps % (2 * nch_fine_per_coarse_full1) == 0);
     std::vector<std::complex<FloatType>> factor(nch_fine_per_coarse_full1 * 2);
     for (int i = 0; i < factor.size(); ++i) {
@@ -58,14 +59,34 @@ void Channelizer::get_transposed(std::complex<RawDataType> *dst) const {
 }
 
 void Channelizer::shift() {
-    dim3 grid(nch_coarse, nsteps/512);
+    if (coeff_len > nch_fine_per_coarse_full) {
+        for (int i = 0; i < nch_coarse; ++i) {
+            cuda_mem_cpy(working_mem1.get() + (nsteps + coeff_len - nch_fine_per_coarse_full) * i,
+                         buffer.get() + (coeff_len - nch_fine_per_coarse_full) * i,
+                         (coeff_len - nch_fine_per_coarse_full),
+                         cudaMemcpyDeviceToDevice);
+        }
+    }
+    dim3 grid(nch_coarse, nsteps / 512);
     dim3 block(512, 1, 1);
     shift_freq_cast_kernel<<<grid, block>>>(this->transposed_data.get(),
                                             this->working_mem1.get(),
                                             this->freq_shift_factor.get(),
                                             this->nsteps,
                                             this->nch_coarse,
-                                            this->nch_fine_per_coarse_full);
+                                            this->nch_fine_per_coarse_full,
+                                            this->coeff_len
+
+    );
+
+    if (coeff_len > nch_fine_per_coarse_full) {
+        for (int i = 0; i < nch_coarse; ++i) {
+            cuda_mem_cpy(buffer.get() + (coeff_len - nch_fine_per_coarse_full) * i,
+                         working_mem1.get() + nsteps + (nsteps + coeff_len - nch_fine_per_coarse_full) * i,
+                         (coeff_len - nch_fine_per_coarse_full),
+                         cudaMemcpyDeviceToDevice);
+        }
+    }
 }
 
 void Channelizer::get_working_mem(std::complex<FloatType> *dst, int n) const {
@@ -111,9 +132,10 @@ void Channelizer::rearrange() {
     }
 }
 
-void Channelizer::channelize(const std::vector<std::complex<RawDataType>>& data, std::vector<std::complex<FloatType>>& output) {
-    assert(data.size()==nsteps*nch_coarse);
-    assert(output.size()==nsteps*nch_coarse/2);
+void Channelizer::channelize(const std::vector<std::complex<RawDataType>> &data,
+                             std::vector<std::complex<FloatType>> &output) {
+    assert(data.size() == nsteps * nch_coarse);
+    assert(output.size() == nsteps * nch_coarse / 2);
     put_raw(data.data());
     transpose();
     shift();
@@ -126,5 +148,17 @@ void Channelizer::channelize(const std::vector<std::complex<RawDataType>>& data,
 std::vector<std::complex<FloatType>> Channelizer::peek_channelized() {
     std::vector<std::complex<FloatType>> result(nsteps * nch_coarse / 2);
     cuda_mem_cpy(result.data(), working_mem1.get(), nsteps * nch_coarse / 2, cudaMemcpyDeviceToHost);
+    return result;
+}
+
+std::vector<std::complex<FloatType>> Channelizer::get_shifted() const {
+    std::vector<std::complex<FloatType>> result((nsteps + coeff_len - nch_fine_per_coarse_full) * nch_coarse);
+    cuda_mem_cpy(result.data(), this->working_mem1.get(), result.size(), cudaMemcpyDeviceToHost);
+    return result;
+}
+
+std::vector<std::complex<FloatType>> Channelizer::get_filtered() const {
+    std::vector<std::complex<FloatType>> result(nsteps * nch_coarse);
+    cuda_mem_cpy(result.data(), this->working_mem2.get(), result.size(), cudaMemcpyDeviceToHost);
     return result;
 }

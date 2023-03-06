@@ -11,14 +11,24 @@ __global__ void shift_freq_cast_kernel(const RawComplex *transposed_data,
                                        const cuComplex *factor,
                                        size_t nsteps,
                                        size_t nch_coarse,
-                                       size_t nch_fine_per_coarse_full) {
+                                       size_t nch_fine_per_coarse_full,
+                                       size_t coeff_len) {
 #if 1
     assert(gridDim.x >= nch_coarse);
-    if (blockIdx.x >=nch_coarse){
+    if (blockIdx.x >= nch_coarse) {
         return;
     }
+    /**output base:
+     * _______v<-output_base here
+     * sd_last|sd_this
+     * sd_last|sd_this
+     * ...
+     * ...
+     */
+
     auto input_base = transposed_data + blockIdx.x * nsteps;
-    auto output_base = shifted_data + blockIdx.x * nsteps;
+    auto output_base = shifted_data + coeff_len - nch_fine_per_coarse_full +
+                       blockIdx.x * (nsteps + coeff_len - nch_fine_per_coarse_full);
     assert(blockDim.x * gridDim.y >= nsteps);
     auto idx = blockIdx.y * blockDim.x + threadIdx.x;
     if (idx < nsteps) {
@@ -83,15 +93,15 @@ __global__ void pfb_conv_kernel(const cuComplex *input,
     size_t ntasks_per_thread = ceil((float) ntasks / (float) gridDim.y);
     // printf("y=%d\n", (blockIdx.y+1)*ntasks_per_thread*nch_fine_per_coarse);
     for (int t = 0; t < ntasks_per_thread; ++t) {
-        const cuComplex *base_in =
-            input + blockIdx.x * nsteps + (blockIdx.y * ntasks_per_thread + t) * nch_fine_per_coarse;
+        const cuComplex *base_in = input + blockIdx.x * (nsteps + coeff_len - nch_fine_per_coarse) +
+                                   (blockIdx.y * ntasks_per_thread + t) * nch_fine_per_coarse;
         cuComplex *base_out = output + blockIdx.x * nsteps + (blockIdx.y * ntasks_per_thread + t) * nch_fine_per_coarse;
         base_out[threadIdx.x] =
             make_float2(base_in[threadIdx.x].x * coeff[threadIdx.x], base_in[threadIdx.x].y * coeff[threadIdx.x]);
 
-        int imax = min(tap_per_branch, (nsteps / nch_fine_per_coarse - (blockIdx.y * ntasks_per_thread + t)));
+        // int imax = min(tap_per_branch, (nsteps / nch_fine_per_coarse - (blockIdx.y * ntasks_per_thread + t)));
 
-        for (int i = 1; i < imax; ++i) {
+        for (int i = 1; i < tap_per_branch; ++i) {
             FloatType c = coeff[threadIdx.x + i * nch_fine_per_coarse];
             base_out[threadIdx.x].x += base_in[threadIdx.x + i * nch_fine_per_coarse].x * c;
             base_out[threadIdx.x].y += base_in[threadIdx.x + i * nch_fine_per_coarse].y * c;

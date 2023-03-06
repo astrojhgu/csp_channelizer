@@ -1,17 +1,25 @@
-all: main scan_freq
+all: main scan_freq test
 
 NVCC=nvcc
 HEADERS=channelizer.hpp kernels.h transpose.hpp types.hpp utils.hpp fir_coeffs.h
 CFLAGS=-O3
 
-main: main.o utils.o channelizer.o kernels.o fir_coeffs.o
+test: test.o utils.o channelizer.o kernels.o fir_coeffs.o
 	nvcc $^ -o $@ -lcufft -lfftw3f
 
-scan_freq: scan_freq.o utils.o channelizer.o kernels.o fir_coeffs.o
+test.o: test.cu $(HEADERS)
+	nvcc -c -o $@ $< $(CFLAGS)
+
+
+
+main: main.o utils.o channelizer.o kernels.o fir_coeffs.o
 	nvcc $^ -o $@ -lcufft -lfftw3f
 
 main.o: main.cu $(HEADERS)
 	nvcc -c -o $@ $< $(CFLAGS)
+
+scan_freq: scan_freq.o utils.o channelizer.o kernels.o fir_coeffs.o
+	nvcc $^ -o $@ -lcufft -lfftw3f
 
 scan_freq.o: scan_freq.cu $(HEADERS)
 	nvcc -c -o $@ $< $(CFLAGS)	

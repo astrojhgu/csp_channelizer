@@ -4,8 +4,10 @@
 #include <cstdint>
 #include <cuda_runtime.h>
 #include <iostream>
+#include <fstream>
 #include <memory>
 #include <utility>
+#include <vector>
 #include "types.hpp"
 extern size_t gpu_mem_used;
 
@@ -86,6 +88,12 @@ template <typename T, typename U>
 void cuda_mem_cpy(T *dst, const U *src, size_t nelem, cudaMemcpyKind dir) {
     assert(sizeof(T) == sizeof(U));
     CHECK_CUDA_ERROR(cudaMemcpy(dst, src, nelem * sizeof(T), dir));
+}
+
+template <typename T>
+void dump_data(const std::vector<T>& input, const char* fname){
+    std::ofstream ofs(fname, std::ios::binary);
+    ofs.write((const char*)input.data(), input.size()*sizeof(T));
 }
 
 #endif
