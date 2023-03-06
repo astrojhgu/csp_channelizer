@@ -40,7 +40,7 @@ kernels.o: kernels.cu $(HEADERS)
 	nvcc -c -o $@ $< $(CFLAGS)
 
 fir_coeffs.o: fir_coeffs.cpp $(HEADERS)
-	g++ -c -o $@ $< $(CFLAGS)
+	g++ -c -o $@ $< -O3
 
 clean:
 	rm -f *.o main
