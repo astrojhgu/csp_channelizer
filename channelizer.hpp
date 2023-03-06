@@ -43,7 +43,7 @@ struct Channelizer {
 
     void shift();
 
-    void get_working_mem(std::complex<FloatType> *dst, int n) const;
+    std::vector<std::complex<FloatType>> get_working_mem(int n) const;
 
     void filter();
 
@@ -58,6 +58,7 @@ struct Channelizer {
     //following functions are for debug purpose
     std::vector<std::complex<FloatType>> get_shifted()const;
     std::vector<std::complex<FloatType>> get_filtered()const;
+    std::vector<std::complex<FloatType>> get_buffer()const;
 };
 
 #endif

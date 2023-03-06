@@ -24,8 +24,10 @@ int main() {
         coeffs[i] *= 100;
     }
 
+    dump_data(coeffs, "coeffs.bin");
+
     std::vector<std::complex<int16_t>> raw_data(nsteps * nch);
-    auto dphi_dpt = 2 * 3.1415926 / 16.0;
+    auto dphi_dpt = 1.5 * 3.1415926 / 16.0;
     auto phi = 0.0;
     for (int i = 0; i < nsteps; ++i) {
         auto x = std::polar<float>(270, phi);
@@ -44,18 +46,30 @@ int main() {
 
     ofstream ofs;
     for (int i = 0; i < 2; ++i) {
-        raw_data[i] = raw_data[0];
+        for (int j = 0; j < nsteps; ++j) {
+            auto x = std::polar<float>(270, phi);
+            std::complex<int16_t> x1(x.real(), x.imag());
+            for (int k = 0; k < nch; ++k) {
+                raw_data[j * nch + k] = x1;
+            }
+            phi += dphi_dpt;
+        }
+        // raw_data[i] = raw_data[0];
         channelizer.put_raw(raw_data.data());
         channelizer.transpose();
 
         channelizer.shift();
-        auto shifted=channelizer.get_shifted();
+        auto shifted = channelizer.get_shifted();
         dump_data(shifted, "shifted.bin");
-        
 
+        auto buffer = channelizer.get_buffer();
+        dump_data(buffer, "buffer.bin");
+
+        auto data = channelizer.get_working_mem(1);
+        dump_data(data, "input.bin");
         channelizer.filter();
-        auto filtered=channelizer.get_filtered();
-        dump_data(filtered, "filtered.bin");
+        data = channelizer.get_working_mem(2);
+        dump_data(data, "output.bin");
 
         channelizer.fft();
 

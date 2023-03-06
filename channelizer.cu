@@ -89,12 +89,14 @@ void Channelizer::shift() {
     }
 }
 
-void Channelizer::get_working_mem(std::complex<FloatType> *dst, int n) const {
+std::vector<std::complex<FloatType>> Channelizer::get_working_mem(int n) const {
+    std::vector<std::complex<FloatType>> result((nsteps + coeff_len - nch_fine_per_coarse_full) * nch_coarse);
     if (n == 1) {
-        cuda_mem_cpy(dst, this->working_mem1.get(), nsteps * nch_coarse, cudaMemcpyDeviceToHost);
+        cuda_mem_cpy(result.data(), this->working_mem1.get(), result.size(), cudaMemcpyDeviceToHost);
     } else {
-        cuda_mem_cpy(dst, this->working_mem2.get(), nsteps * nch_coarse, cudaMemcpyDeviceToHost);
+        cuda_mem_cpy(result.data(), this->working_mem2.get(), result.size(), cudaMemcpyDeviceToHost);
     }
+    return result;
 }
 
 void Channelizer::filter() {
@@ -160,5 +162,12 @@ std::vector<std::complex<FloatType>> Channelizer::get_shifted() const {
 std::vector<std::complex<FloatType>> Channelizer::get_filtered() const {
     std::vector<std::complex<FloatType>> result(nsteps * nch_coarse);
     cuda_mem_cpy(result.data(), this->working_mem2.get(), result.size(), cudaMemcpyDeviceToHost);
+    return result;
+}
+
+std::vector<std::complex<FloatType>> Channelizer::get_buffer() const {
+    std::vector<std::complex<FloatType>> result( (coeff_len-nch_fine_per_coarse_full)* nch_coarse);
+    std::cout<<"bufsize:"<<(coeff_len-nch_fine_per_coarse_full)<<std::endl;
+    cuda_mem_cpy(result.data(), this->buffer.get(), result.size(), cudaMemcpyDeviceToHost);
     return result;
 }

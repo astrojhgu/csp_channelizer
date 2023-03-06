@@ -74,9 +74,9 @@ int main() {
     ofs.close();
 
     cout<<(transposed.size()*sizeof(complex<int16_t>))<<" "<<(raw_data1.size()*sizeof(complex<int16_t>))<<endl;
-    std::vector<std::complex<float>> fft_result(nsteps * nch);
+    //std::vector<std::complex<float>> fft_result(nsteps * nch);
 
-    channelizer.get_working_mem(fft_result.data(), 1);
+    auto fft_result=channelizer.get_working_mem(1);
 
     auto channelized = channelizer.peek_channelized();
     ofs.open("result.bin", std::ios::binary);
