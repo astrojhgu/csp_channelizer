@@ -1,4 +1,4 @@
-all: main scan_freq test_filter test scan_freq_c
+all: main scan_freq test_filter test scan_freq_c channelize
 
 NVCC=nvcc
 HEADERS=channelizer.hpp kernels.h transpose.hpp types.hpp utils.hpp fir_coeffs.h
@@ -29,6 +29,12 @@ test: test.o $(OBJS)
 
 test.o: test.cu $(HEADERS)
 	nvcc -c -o $@ $< $(NVFLAGS)
+
+channelize: channelize.o libcspch.a
+	g++ -o $@ $< $(LIBS)
+
+channelize.o: channelize.cpp $(HEADERS)
+	g++ -c $< -c -o $@ $(CFLAGS)
 
 
 main: main.o libcspch.a
