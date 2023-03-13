@@ -16,7 +16,7 @@ extern "C" void destroy_channelizer(Channelizer *ptr) {
 }
 
 extern "C" void channelize(Channelizer *ptr,
-                int16_t *input /*1-d array with (nch_coarse*2, nsteps) elements*/,
+                const int16_t *input /*1-d array with (nch_coarse*2, nsteps) elements*/,
                 float *output /*1-d array with (nch_coarse, nsteps) elements*/) {
     ptr->channelize((const std::complex<int16_t> *) input, (std::complex<float> *) output);
 }

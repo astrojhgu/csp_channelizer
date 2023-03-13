@@ -15,7 +15,7 @@ struct Channelizer *create_channelizer(
 void destroy_channelizer(struct Channelizer *ptr);
 
 void channelize(struct Channelizer *ptr,
-                int16_t *input /*1-d array with (nch_coarse*2, nsteps) elements*/,
+                const int16_t *input /*1-d array with (nch_coarse*2, nsteps) elements*/,
                 float *output /*1-d array with (nch_coarse, nsteps) elements*/);
 
 void calc_coeff(size_t nch, size_t tap_per_ch, float k, float *coeff);
