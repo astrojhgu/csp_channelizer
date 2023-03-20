@@ -1,4 +1,5 @@
 #include "channelizer.hpp"
+#include "correlate.h"
 #include "fir_coeffs.h"
 #include <cstring>
 
@@ -21,8 +22,22 @@ extern "C" void channelize(Channelizer *ptr,
     ptr->channelize((const std::complex<int16_t> *) input, (std::complex<float> *) output);
 }
 
+extern "C" void channelize_no_out(Channelizer *ptr,
+                const int16_t *input /*1-d array with (nch_coarse*2, nsteps) elements*/) {
+    ptr->channelize((const std::complex<int16_t> *) input);
+}
+
+
 extern "C" void calc_coeff(std::size_t nch, std::size_t tap_per_ch, FloatType k, float* coeff){
     auto coeff1=pfb_coeff(nch, tap_per_ch, k);
     std::cout<<coeff1.size()<<" "<<nch<<" "<<tap_per_ch<<std::endl;
     memcpy((char*) coeff, coeff1.data(), coeff1.size()*sizeof(float));
+}
+
+extern "C" Correlator* create_correlator(size_t nch, size_t nsteps){
+    return new Correlator(nch, nsteps);
+}
+
+extern "C" void correlate(Correlator* ptr,const Channelizer* ch1,const Channelizer* ch2, float* result){
+    ptr->correlate(ch1->get_output_buffer(), ch2->get_output_buffer(), (std::complex<float>*) result);
 }

@@ -8,75 +8,62 @@
 #include <chrono>
 #include <thread>
 #include "fir_coeffs.h"
+#include "correlate.h"
 using namespace std;
 
 #include "transpose.hpp"
 #include "channelizer.hpp"
 
+void __global__ func(cuComplex* x, cuComplex* y, cuComplex* z){
+    *x=make_float2(5e6, 5e6);
+    *y=make_float2(5e6, -5e6);
+    *z=cuCmulf(*x, cuConjf(*y));
+    //printf("%e %e\n", x->x, x->y );
+    //printf("%e %e\n", y->x, y->y );
+    printf("%e\n", x->x*y->x+x->y*y->y);
+    printf("%e %e\n", z->x, z->y);
+}
+
+
 int main() {
-    auto nsteps = 1 << 20;
-    auto nch = 88;
-    auto nch_fine_per_coarse = 32;
-    auto tap_per_ch = 8;
+    int nch_coarse = 88;
+    int nch_fine_per_coarse = 16;
+    int nch_total = nch_coarse * nch_fine_per_coarse;
+    int nsteps = (1 << 20) / nch_fine_per_coarse / 2;
 
-    std::vector<float> coeffs = pfb_coeff(nch_fine_per_coarse, tap_per_ch, 0.8);
-    for (int i = 0; i < coeffs.size(); ++i) {
-        coeffs[i] *= 100;
+    std::vector<std::complex<float>> input1_h(nsteps * nch_total, {1, 0});
+    std::vector<std::complex<float>> input2_h(nsteps * nch_total, {1, 0});
+    std::vector<std::complex<float>> output_h(nsteps * nch_total, {0.0, 0.0});
+    std::vector<std::complex<float>> answer_h(nsteps * nch_total, {0.0, 0.0});
+    for (int i = 0; i < nsteps * nch_total; ++i) {
+        input1_h[i] = {float(i), float(i)};
+        input2_h[i] = {float(i), -float(i)};
+        answer_h[i] = input1_h[i] * std::conj(input2_h[i]);
     }
 
-    dump_data(coeffs, "coeffs.bin");
-
-    std::vector<std::complex<int16_t>> raw_data(nsteps * nch);
-    auto dphi_dpt = 1.5 * 3.1415926 / 16.0;
-    auto phi = 0.0;
-    for (int i = 0; i < nsteps; ++i) {
-        auto x = std::polar<float>(270, phi);
-        std::complex<int16_t> x1(x.real(), x.imag());
-        for (int j = 0; j < nch; ++j) {
-            raw_data[i * nch + j] = x1;
+    std::vector<std::complex<float>> answer(nch_total, {0.0, 0.0});
+    for (int ich = 0; ich < nch_total; ++ich) {
+        answer[ich] = {0.0, 0.0};
+        for (int istep = 0; istep < nsteps; ++istep) {
+            answer[ich] += answer_h[ich * nsteps + istep];
         }
-        phi += dphi_dpt;
+        // std::cout << answer[ich] << " ";
     }
 
-    std::cout << "initialization finished" << std::endl;
-    Channelizer channelizer(nsteps, nch, nch_fine_per_coarse, coeffs);
+    auto input1 = gpu_alloc<cuComplex>(input1_h.size());
+    auto input2 = gpu_alloc<cuComplex>(input2_h.size());
 
-    // exit(0);
-    std::cout << (gpu_mem_used / 1024.0 / 1024 / 1024) << " GB" << std::endl;
+    cuda_mem_cpy(input1.get(), input1_h.data(), input1_h.size(), cudaMemcpyHostToDevice);
+    cuda_mem_cpy(input2.get(), input2_h.data(), input2_h.size(), cudaMemcpyHostToDevice);
 
-    ofstream ofs;
-    for (int i = 0; i < 2; ++i) {
-        for (int j = 0; j < nsteps; ++j) {
-            auto x = std::polar<float>(270, phi);
-            std::complex<int16_t> x1(x.real(), x.imag());
-            for (int k = 0; k < nch; ++k) {
-                raw_data[j * nch + k] = x1;
-            }
-            phi += dphi_dpt;
-        }
-        // raw_data[i] = raw_data[0];
-        channelizer.put_raw(raw_data.data());
-        channelizer.transpose();
-
-        channelizer.shift();
-        auto shifted = channelizer.get_shifted();
-        dump_data(shifted, "shifted.bin");
-
-        auto buffer = channelizer.get_buffer();
-        dump_data(buffer, "buffer.bin");
-
-        auto data = channelizer.get_working_mem(1);
-        dump_data(data, "input.bin");
-        channelizer.filter();
-        data = channelizer.get_working_mem(2);
-        dump_data(data, "output.bin");
-
-        channelizer.fft();
-
-        channelizer.rearrange();
-
-        // CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-        cout << i << std::endl;
+    Correlator corr(nch_total, nsteps);
+    std::vector<complex<float>> x(nch_total*nsteps);
+    corr.correlate(input1.get(), input2.get(), x.data());
+    // for (int i = 0; i < 1000; ++i) {
+    //auto x = correlate(input1.get(), input2.get(), buffer.get(), nch_total, nsteps);
+    for (int i = 0; i < nch_total; ++i) {
+        //std::cout <<  << std::endl;
+        std::cout<<answer[i]<<" "<<x[i]<<" "<<std::abs(x[i] - answer[i]) / std::abs(x[i] + answer[i]) * 2.0f<<std::endl;
     }
-    CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+    //}
 }

@@ -54,6 +54,8 @@ struct Channelizer {
 
     void channelize(const std::vector<std::complex<RawDataType>>& data, std::vector<std::complex<FloatType>>& output);
     void channelize(const std::complex<RawDataType>* data, std::complex<FloatType>* output);
+    const cuComplex* channelize(const std::complex<RawDataType>* data);
+    const cuComplex* get_output_buffer()const;
     std::vector<std::complex<FloatType>> peek_channelized();
 
 

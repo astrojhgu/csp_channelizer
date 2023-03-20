@@ -1,10 +1,10 @@
 all: main scan_freq test_filter test scan_freq_c channelize
 
 NVCC=nvcc
-HEADERS=channelizer.hpp kernels.h transpose.hpp types.hpp utils.hpp fir_coeffs.h
+HEADERS=channelizer.hpp kernels.h transpose.hpp types.hpp utils.hpp fir_coeffs.h correlate.h cspch.h
 NVFLAGS=-O3 -rdc=true
 CFLAGS=-I /usr/local/cuda/include -O3 -g
-OBJS=utils.o channelizer.o kernels.o fir_coeffs.o channelizer_wrapper.o
+OBJS=utils.o channelizer.o kernels.o fir_coeffs.o channelizer_wrapper.o correlate.o
 NVLIBS=-lcufft -lfftw3f -lcudart
 LIBS=-L . -L /usr/local/cuda/lib64 -lcspch -lfftw3f -lcudart -lcufft
 
@@ -66,6 +66,9 @@ channelizer.o: channelizer.cu $(HEADERS)
 
 kernels.o: kernels.cu $(HEADERS)
 	nvcc -c -o $@ $< $(NVFLAGS)
+
+correlate.o: correlate.cu $(HEADERS)
+	nvcc -c -o $@ $< $(NVFLAGS)	
 
 fir_coeffs.o: fir_coeffs.cpp $(HEADERS)
 	g++ -c -o $@ $< -O3
